@@ -1,0 +1,29 @@
+{
+  "provGroups": [
+    {
+      "enabled": true,
+      "provGroup": "vyos01",
+      "deviceType": "vyos",
+      "interfacePrefix": "dum",
+      "key": "DHFGdsds3434LLLTTsdshtbPPPfdfdq",
+      "IP": "10.50.0.248"
+    },
+    {
+      "enabled": false,
+      "provGroup": "cisco01",
+      "deviceType": "nexus",
+      "interfacePrefix": "null",
+      "user": "ciscoapi",
+      "key": "fsdfssfe4ergrtjt7asefrtjuHDH",
+      "IP": "10.50.0.246"
+    },
+    {
+      "enabled": true,
+      "provGroup": "vyos02",
+      "deviceType": "vyos",
+      "interfacePrefix": "dum",
+      "key": "youGdsds3434LLLTTsdshtbPFGuirt5",
+      "IP": "10.50.0.247"
+    }
+  ]
+}

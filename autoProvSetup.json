@@ -1,0 +1,13 @@
+{
+    "url": "https://10.50.0.30/mmws/api/command/",
+    "validateCert" : false,
+    "skipNetworks" : ["127.0.0.1","128.0.0.0"],
+    "gateway": "firstIP",
+    "zone2addRouterInterfaceNamesToIfReq": "routers.lab",
+    "logFileName" : "autoProvisioning.log",
+    "logFileSizeInBytes" : 10485760,
+    "logFileBackupCount" : 5,
+    "encryptAuth" : true,
+    "fernetUser" : "Fernet",
+    "logLevel" : 10
+}
