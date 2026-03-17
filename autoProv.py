@@ -5,7 +5,7 @@
 # This script when run as a Event Hook | Scheduled Event will search Micetro for Networks tagged with
 # auto-provision data within custom properties and use this to automatically create the target networks
 # on routers
-# This script uses a vyos based router (https://vyos.io/) as an example
+# This script uses a VyOS based router (https://vyos.io/) as an example
 #
 # This should be copied to the Micetro central scripts directory and then added to Change events under Admin || Configuration || Event Hooks
 # This is an example implementation. No warranty or support implied.
@@ -14,20 +14,17 @@
 __version__ = '0.0.1'
 
 import argparse
-from datetime import datetime
+
 import requests
 from pyvyos import VyDevice
 from requests.packages.urllib3.exceptions import InsecureRequestWarning  # type: ignore
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-from requests.exceptions import ConnectTimeout
 import json
 import ipaddress
 import logging.handlers
-import sys, os, re, random, string
+import os, random, string
 from cryptography.fernet import Fernet
-import pyvyos
-
 
 # text to pre-pend encrypted auth in autoProvGroups
 ENCRYPTION_PREFIX = 'EEEEEE'
@@ -42,11 +39,11 @@ headers = {
 def createMissingCustomFields():
     if not hasCustomProperty("Range", "auto-provision"):
         logger.info("Creating custom property definition 'auto-provision' for Networks")
-        param = '{"objType": "Range", "propertyDefinition": {"name": "auto-provision", "type": "String", "readOnly": true, "listItems": ["add","delete","none","active"],"defaultValue":"none"},"saveComment":"added by autoProv.py"}'
+        param = '{"objType": "Range", "propertyDefinition": {"name": "auto-provision", "type": "String", "readOnly": false, "listItems": ["add","delete","none","active"],"defaultValue":"none"},"saveComment":"added by autoProv.py"}'
         sess.post(configuration['url'] + 'AddPropertyDefinition', auth=(username, password), headers=headers,
                   data=param, verify=configuration['validateCert'])
         logger.info("Creating custom property definition 'provision-grp' for Networks")
-        param = '{"objType": "Range", "propertyDefinition": {"name": "provision-grp", "type": "String", "readOnly": false, "listItems": ["none"],"defaultValue":"none"},"saveComment":"added by autoProv.py"}'
+        param = '{"objType": "Range", "propertyDefinition": {"name": "provision-grp", "type": "String", "readOnly": false, "listItems": ["none","vyos01","vyos02","vyos03"],"defaultValue":"none"},"saveComment":"added by autoProv.py"}'
         sess.post(configuration['url'] + 'AddPropertyDefinition', auth=(username, password), headers=headers,
                   data=param, verify=configuration['validateCert'])
 
@@ -222,6 +219,7 @@ if __name__ == "__main__":
             provGroups = json.load(f)
 
         # Check to see if we should be encrypting credentials
+        fernetKey = ""
         if configuration['encryptAuth']:
             fernetUser = configuration['fernetUser']
             createFernetUserIfNeeded(configuration['fernetUser'])
@@ -259,9 +257,24 @@ if __name__ == "__main__":
                         case "vyos":
                             logger.info("Looking for Networks related to deviceGroup %s" % provGroup['provGroup'])
                             vRanges = getIPAMData(provGroup['provGroup'])
+
+                            # Check to see if we should be encrypting keys
+                            apiKey = provGroup['key']
+                            if configuration['encryptAuth']:
+                                # Check to see if the key is already encrypted. In which case decrypt
+                                if isEncrypted(apiKey):
+                                    logger.debug("decrypting API keys for %s" % ( provGroup['provGroup'] ))
+                                    apiKey = decryptCred(fernetKey, provGroup['key'])
+                                else:
+                                    # Encrypt the key and store in the profile
+                                    logger.debug("encrypting API keys for %s" % (provGroup['provGroup']))
+                                    # Set needToUpdateProvGroups to true (will write back the JSON) and insert the encrypted key
+                                    needToUpdateProvGroups = True
+                                    provGroup['key'] = encryptCred(fernetKey, apiKey)
+
                             # Setup connection to the vios API
                             logger.debug("Setting up connection to vyos router: %s " % ( provGroup['IP'] ))
-                            vDevice = VyDevice(hostname=provGroup['IP'], apikey=provGroup['key'], port=443, protocol="https", verify=False)
+                            vDevice = VyDevice(hostname=provGroup['IP'], apikey=apiKey, port=443, protocol="https", verify=False)
 
                             for vRange in vRanges:
                                 logger.debug("Processing Micetro Range Reference %s" % ( vRange ))
@@ -292,7 +305,6 @@ if __name__ == "__main__":
                                             logger.error("vyos API returned error: %s" % (vResponse.error))
                                     except Exception as e:
                                         logger.error(e)
-
 
                                 # delete a network from vyos
                                 if vRanges[vRange]['auto-provision'] == "delete":
@@ -331,8 +343,6 @@ if __name__ == "__main__":
                                             logger.error("vyos API returned error: %s" % (vResponse.error))
                                     except Exception as e3:
                                         logger.error(e3)
-
-
 
                                 # Nothing to do
                                 if vRanges[vRange]['auto-provision'] == "none":
