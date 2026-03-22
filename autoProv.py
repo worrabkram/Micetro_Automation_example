@@ -11,7 +11,7 @@
 # This is an example implementation. No warranty or support implied.
 #
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 import argparse
 
@@ -39,7 +39,7 @@ headers = {
 def createMissingCustomFields():
     if not hasCustomProperty("Range", "auto-provision"):
         logger.info("Creating custom property definition 'auto-provision' for Networks")
-        param = '{"objType": "Range", "propertyDefinition": {"name": "auto-provision", "type": "String", "readOnly": false, "listItems": ["add","delete","none","active"],"defaultValue":"none"},"saveComment":"added by autoProv.py"}'
+        param = '{"objType": "Range", "propertyDefinition": {"name": "auto-provision", "type": "String", "readOnly": false, "listItems": ["add","delete","none","provisioned"],"defaultValue":"none"},"saveComment":"added by autoProv.py"}'
         sess.post(configuration['url'] + 'AddPropertyDefinition', auth=(username, password), headers=headers,
                   data=param, verify=configuration['validateCert'])
         logger.info("Creating custom property definition 'provision-grp' for Networks")
